@@ -1,0 +1,124 @@
+name: Build n Deploy Pipeline
+
+on:
+  # push:
+  #   # branches:
+  #   #   - main
+  workflow_dispatch:
+
+env:
+  APPLICATION_NAME: ${{ github.event.repository.name }}
+  DOCKER_IMAGE: ${{secrets.DOCKERHUB_USERNAME}}/python-nonprod-app
+  HELM_RELEASE_NAME: pubip
+  DEPLOY_TAG: ${{ github.sha }}
+
+jobs:
+  anlayse:
+    name: Analyase Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Code Lint with Pylint
+        run: pylint ./src
+
+      - name: Run Unit Tests
+        run: unittest tests/test_main.py
+
+      - uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  docker_build_push:
+    name: Docker Jobs
+    runs-on: ubuntu-latest
+    needs: [anlayse]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: login to docker registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{secrets.DOCKERHUB_USERNAME}}
+          password: ${{secrets.DOCKERHUB_TOKEN}}
+
+      - name: build and push docker image to registry
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.DOCKER_IMAGE }}:${{ env.DEPLOY_TAG }}
+
+      - name: Scan image
+        uses: anchore/scan-action@v3
+        with:
+          image: ${{ env.DOCKER_IMAGE }}:${{ env.DEPLOY_TAG }}
+          fail-build: false # true  
+          severity-cutoff: critical
+
+  helm_deploy:
+    name: Helm Chart Job
+    runs-on: ubuntu-latest
+    needs: [docker_build_push]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4.2.0
+        with:
+          version: '3.16.0' # default is latest (stable)
+        id: install
+
+      - name: Extract branch name
+        id: extract_branch
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+
+      - uses: actions-hub/kubectl@master
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }} # Configure with the Targer AKS / EKS Cluster Kube config file via secrets
+
+      - name: Deploy Helm Chart
+        run: |
+          helm upgrade --install ${{ env.HELM_RELEASE_NAME }} ./charts \
+            --values ./charts/values.yaml \
+            --set image.tag=${{ env.DEPLOY_TAG }} --wait
+
+      - name: Notify Slack on Success
+        if: success()
+        env:
+          BRANCH_NAME: ${{ steps.extract_branch.outputs.branch }}
+        run: |
+          ENVIRONMENT="${{ steps.extract_branch.outputs.branch }}"
+          STATUS="Deployment successful"
+          TIMESTAMP="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          MESSAGE="Application Name: ${{ env.APPLICATION_NAME }}\nEnvironment: $ENVIRONMENT\nStatus: $STATUS\nDeployed Tag: ${{ env.DEPLOY_TAG }}\nBranch: $BRANCH_NAME\nTimeStamp: $TIMESTAMP"
+          MESSAGE="{\"text\":\"$MESSAGE\"}"
+          curl -X POST -H 'Content-type: application/json' --data "$MESSAGE" ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify Slack on Failure
+        if: failure()
+        env:
+          BRANCH_NAME: ${{ steps.extract_branch.outputs.branch }}
+        run: |
+          ENVIRONMENT="${{ steps.extract_branch.outputs.branch }}"
+          STATUS="Failed"
+          REASON="Deployment Failed"
+          TIMESTAMP="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          PIPELINE_WORKFLOW="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          MESSAGE="Application Name: ${{ env.APPLICATION_NAME }}\nEnvironment: $ENVIRONMENT\nStatus: $STATUS\nReason: $REASON\nFailed Tag: ${{ env.DEPLOY_TAG }}\nBranch: $BRANCH_NAME\nTimeStamp: $TIMESTAMP\nPipeline-Workflow: $PIPELINE_WORKFLOW"
+          MESSAGE="{\"text\":\"$MESSAGE\"}"
+          curl -X POST -H 'Content-type: application/json' --data "$MESSAGE" ${{ secrets.SLACK_WEBHOOK_URL }}

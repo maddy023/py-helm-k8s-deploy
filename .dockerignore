@@ -1,0 +1,6 @@
+# Ignore everything
+*
+
+# Allow main.py and requirements.txt
+!/src
+!requirements.txt

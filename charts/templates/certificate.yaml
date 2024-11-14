@@ -1,0 +1,16 @@
+{{- if .Values.cert.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "py-pubip.fullname" . }}
+  labels:
+    {{- include "py-pubip.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "py-pubip.fullname" . }}-tls
+  issuerRef:
+    name: letsencrypt-provider-production
+    kind: ClusterIssuer
+  commonName: {{ (index .Values.ingress.hosts 0).host | quote }}
+  dnsNames:
+  - {{ (index .Values.ingress.hosts 0).host | quote }}
+{{- end }}
