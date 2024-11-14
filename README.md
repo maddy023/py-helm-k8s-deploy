@@ -1,7 +1,30 @@
 
-## Documentation
+# Project Documentation 
 
 This repository hosts a Python-based FastAPI application, designed to be deployed on a Kubernetes (K8s) cluster. The following documentation outlines the steps required to prepare, build, and deploy the application using a CI/CD pipeline.
+
+For detailed information about the pipeline, including multi-job workflows, step-by-step configurations, and requirements, please refer to the following link:  
+[Pipeline Documentation](./docs/pipeline.md)
+
+
+## Repository Structure:
+├── src/                  # Application source code
+│   └── main.py           
+├── tests/                # UnitTest files
+│   └── test_main.py      
+├── charts/               # Helm deployment
+│   ├── templates/        
+│   ├── values.yaml       
+│   └── Chart.yaml        
+├── Dockerfile          
+├── docs/                 # Documentations
+│   └── pipeline.md       # CI/CD Process
+├── .github/workflows/    # GitHub Actions
+├── requirements/         # Dependencies
+├── Makefile              # Build automation
+├── README.md             # Project documentation
+└── .gitignore            # Git ignore patterns
+└── .dockerignore         # Docker ignore patterns
 
 ### Step 1. Setting Up the Python Environment
 
@@ -206,3 +229,15 @@ To create a `kubeconfig` file for a Service Account (SA) with the required permi
     -   Validate access by listing resources in the namespace (e.g., `kubectl get pods --kubeconfig=/path/to/kubeconfig`).
 
 This kubeconfig file can now be used for deploying applications in your CI/CD pipeline.
+
+### Challenges Faced
+
+1.  **Optimizing Docker Image Size and Security**  
+    Faced challenges in minimizing the Docker image size and reducing vulnerabilities. Tested multiple base images, ultimately choosing a smaller, security-focused base to reduce vulnerabilities significantly, though not entirely eliminate them.
+    
+2.  **Learning Python-Specific CI Tools**  
+    Researching Python tools for linting, formatting, and unit testing required a shift, as it differs from typical Terraform workflows. Developed familiarity with `pylint`, `black` (for formatting), and `unittest`, and integrated them into the pipeline to ensure code quality and maintainability.
+
+3.  **Caching Mechanisms**: Explored caching strategies to optimize build times (e.g., for Docker layers and dependencies) but kept them aside for this use case to avoid added complexity.
+
+4.  **Enhanced Security Scans**: While advanced security scanning for dependencies and container images was considered, it was deferred for simplicity, as it could introduce unnecessary complexity at this stage.
