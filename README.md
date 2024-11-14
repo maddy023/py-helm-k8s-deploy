@@ -3,11 +3,11 @@
 
 This repository hosts a Python-based FastAPI application, designed to be deployed on a Kubernetes (K8s) cluster. The following documentation outlines the steps required to prepare, build, and deploy the application using a CI/CD pipeline.
 
-For detailed information about the pipeline, including multi-job workflows, step-by-step configurations, and requirements, please refer to the following link:  
-[Pipeline Documentation](./docs/pipeline.md)
-
+For detailed information about the pipeline, including multi-job workflows, step-by-step configurations, and requirements, please refer to the following link: [Pipeline Documentation](./docs/pipeline.md)
 
 ## Repository Structure:
+
+```
 ├── src/                  # Application source code
 │   └── main.py           
 ├── tests/                # UnitTest files
@@ -25,6 +25,7 @@ For detailed information about the pipeline, including multi-job workflows, step
 ├── README.md             # Project documentation
 └── .gitignore            # Git ignore patterns
 └── .dockerignore         # Docker ignore patterns
+```
 
 ### Step 1. Setting Up the Python Environment
 
@@ -241,3 +242,11 @@ This kubeconfig file can now be used for deploying applications in your CI/CD pi
 3.  **Caching Mechanisms**: Explored caching strategies to optimize build times (e.g., for Docker layers and dependencies) but kept them aside for this use case to avoid added complexity.
 
 4.  **Enhanced Security Scans**: While advanced security scanning for dependencies and container images was considered, it was deferred for simplicity, as it could introduce unnecessary complexity at this stage.
+
+
+**Important Note**: This project includes a [Makefile](https://github.com/maddy023/py-helm-k8s-deploy/blob/main/Makefile) to speed up local development in Terraform. The `make` targets act as a wrapper around Docker and Python commands. As such, `make` has only been tested/verified on **Linux/Mac OS**. Though, it is possible to [install make using Chocolatey](https://community.chocolatey.org/packages/make), we **do not** guarantee this approach as it has not been tested/verified. You may use the commands in the [Makefile](https://github.com/maddy023/py-helm-k8s-deploy/blob/main/Makefile) as a guide to run each Terraform command locally on Windows.
+
+```sh
+$ make help
+$ make env
+```
