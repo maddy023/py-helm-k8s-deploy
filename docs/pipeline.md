@@ -3,6 +3,8 @@
 
 This document provides an overview of the CI/CD pipeline used to build, deploy, and notify the status of deployments for the FastAPI application.
 
+[pipeline.yaml](../.github/workflows/buldndeploy.yaml)
+
 ## Pipeline Name: `Build n Deploy Pipeline`
 
 ### Secrets Used in the Pipeline
