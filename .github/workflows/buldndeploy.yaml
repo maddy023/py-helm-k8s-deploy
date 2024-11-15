@@ -1,7 +1,9 @@
 name: Build n Deploy Pipeline
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 env:
   APPLICATION_NAME: ${{ github.event.repository.name }}
